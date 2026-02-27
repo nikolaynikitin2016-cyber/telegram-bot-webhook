@@ -1,7 +1,8 @@
 import os
 import logging
 from flask import Flask, request, jsonify
-from telegram import Update, Bot
+import telegram
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import asyncio
 
@@ -16,12 +17,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Создаем компоненты
-bot = Bot(token=TOKEN)
+# Создаем Flask приложение
 app = Flask(__name__)
 
-# Создаем Application для обработки команд
-telegram_app = Application.builder().token(TOKEN).build()
+# Глобальные переменные для бота
+bot = telegram.Bot(token=TOKEN)
+application = None
+
+# Функция инициализации приложения
+async def init_application():
+    global application
+    if application is None:
+        logger.info("🔄 Инициализация Telegram приложения...")
+        application = Application.builder().token(TOKEN).build()
+        
+        # Добавляем обработчики
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        await application.initialize()
+        logger.info("✅ Telegram приложение инициализировано")
+    return application
 
 # ----- ОБРАБОТЧИКИ КОМАНД -----
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -53,19 +70,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Сообщение обработано через webhook."
     )
 
-# Регистрируем обработчики
-telegram_app.add_handler(CommandHandler("start", start))
-telegram_app.add_handler(CommandHandler("help", help_command))
-telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-# Инициализация приложения (выполнится при первом запросе)
-@app.before_first_request
-def init():
-    """Инициализация Telegram приложения"""
-    logger.info("🔄 Инициализация Telegram приложения...")
-    asyncio.run(telegram_app.initialize())
-    logger.info("✅ Telegram приложение инициализировано")
-
 # ----- WEBHOOK ENDPOINT -----
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -80,8 +84,16 @@ def webhook():
         # Создаем объект Update из JSON
         update = Update.de_json(update_data, bot)
         
-        # Обрабатываем обновление
-        asyncio.run(telegram_app.process_update(update))
+        # Запускаем обработку в новом event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        async def process():
+            app = await init_application()
+            await app.process_update(update)
+        
+        loop.run_until_complete(process())
+        loop.close()
         
         logger.info("✅ Обновление обработано")
         return jsonify({"status": "ok"}), 200
