@@ -8,24 +8,26 @@ bot = telegram.Bot(token=TOKEN)
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @app.route('/webhook', methods=['POST'])
 async def webhook():
+    """Обработчик входящих сообщений от Telegram."""
     try:
+        # Получаем и разбираем обновление от Telegram
         update = telegram.Update.de_json(request.get_json(force=True), bot)
         chat_id = update.message.chat.id
-        text = update.message.text
-        
-        logging.info(f"Получено: {text} от {chat_id}")
-        
-        if text == '/start':
-            await bot.send_message(chat_id=chat_id, text="✅ Бот работает!")
-        else:
-            await bot.send_message(chat_id=chat_id, text=f"Ты написал: {text}")
-            
+        user_text = update.message.text
+        logger.info(f"Получено сообщение: '{user_text}' от чата {chat_id}")
+
+        # Здесь будет отправка запроса в CaptainAgent
+        # Пока просто отправляем эхо-ответ
+        await bot.send_message(chat_id=chat_id, text=f"Ты написал: {user_text}")
+
         return 'OK', 200
     except Exception as e:
-        logging.error(f"Ошибка: {e}")
+        logger.error(f"Ошибка при обработке webhook: {e}", exc_info=True)
+        # Важно всегда возвращать 200, даже при ошибке, чтобы Telegram не слал сообщение повторно
         return 'OK', 200
 
 @app.route('/')
