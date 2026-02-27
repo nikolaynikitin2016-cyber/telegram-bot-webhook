@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import asyncio
 
 # ============ НАСТРОЙКИ ============
-TOKEN = "8512903035:AAGaNTmKbfbzdYlXajySUoGv2smiBnTyAhg"
+TOKEN = "8444088116:AAENC53CGKlDc-DCwrHUbh_UA4NRT0m0rjc"
 CAPTAIN_API_URL = "https://captain-agent.onrender.com/analyze"  # URL CaptainAgent (когда запустишь)
 # ===================================
 
