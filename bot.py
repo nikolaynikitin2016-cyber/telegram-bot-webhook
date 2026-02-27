@@ -10,7 +10,7 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 @app.route('/webhook', methods=['POST'])
-def webhook():
+async def webhook():
     try:
         update = telegram.Update.de_json(request.get_json(force=True), bot)
         chat_id = update.message.chat.id
@@ -19,9 +19,9 @@ def webhook():
         logging.info(f"Получено: {text} от {chat_id}")
         
         if text == '/start':
-            bot.send_message(chat_id=chat_id, text="✅ Бот работает!")
+            await bot.send_message(chat_id=chat_id, text="✅ Бот работает!")
         else:
-            bot.send_message(chat_id=chat_id, text=f"Ты написал: {text}")
+            await bot.send_message(chat_id=chat_id, text=f"Ты написал: {text}")
             
         return 'OK', 200
     except Exception as e:
@@ -30,8 +30,8 @@ def webhook():
 
 @app.route('/')
 def index():
-    return "Бот запущен"
+    return "Бот работает"
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
